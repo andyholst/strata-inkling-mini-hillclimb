@@ -84,4 +84,54 @@ actually used, and the engine's own chunk line. None of them contains an API key
 
 `--chunk 2048` on SQ-10, and `--chunk 1024` on SQ-15 and SQ-20, did not beat the
 automatic chunk of 512. Those preset files were not copied and were not edited.
-See `PLAN.md` for the numbers. The 117169-token needle matched 3/3 on every measured row.
+The 117169-token needle matched 3/3 on every measured row. The raw rows are
+`ledger.jsonl`. Prompt tok/s is `prompt_tokens / time-to-first-token`. Decode
+tok/s is the harness figure, `(completion_tokens - 1)` from the first streamed
+token to the end of the stream. Each speed cell below is one sample.
+
+## SQ-10 (2026-11-24)
+
+Preset `SQ-10 128K`, chunk 512, `--vram-experts-gb 8.60`, DSpark. The candidate
+was `--chunk 2048` only. It was not kept.
+
+| Run | Short decode | Prefill at 117169 | TTFT | Decode at 117169 | Retrieval |
+|---|---:|---:|---:|---:|---|
+| Control, chunk 512 | 122.60 tok/s | 1335.5 tok/s | 87.7 s | 9.58 tok/s | 3/3 |
+| Rejected, `--chunk 2048` | 120.43 tok/s | 1336.8 tok/s | 87.7 s | 8.43 tok/s | 3/3 |
+
+Host RSS peak was 3.48 GiB on the control and 3.65 GiB on the candidate. A
+144469-token document (the Qwen `--long 185000` shape) was rejected with HTTP 400
+before this pair. That failed row still recorded a short decode of 122.46 tok/s.
+Short TTFT on the control was 91.3 ms.
+
+## SQ-15 (2026-11-24)
+
+Preset `SQ-15 128K`, chunk 512, `--vram-experts-gb 11.49`, DSpark. KV was 3072
+tokens in VRAM and 128000 in host memory. The candidate was `--chunk 1024` only.
+It was not kept.
+
+| Run | Short decode | Prefill at 117169 | TTFT | Decode at 117169 | Retrieval |
+|---|---:|---:|---:|---:|---|
+| Control, chunk 512 | 98.72 tok/s | 837.4 tok/s | 139.9 s | 3.17 tok/s | 3/3 |
+| Rejected, `--chunk 1024` | 95.80 tok/s | 833.8 tok/s | 140.5 s | 3.21 tok/s | 3/3 |
+
+Host RSS peak on the control was 5.9 GiB. The candidate row recorded 0 because
+that watchdog still matched only `strata --serve`, and this binary is
+`strata-inkling`. The rejected 144469-token prompt recorded a short decode of
+98.60 tok/s before the HTTP 400. Short TTFT on the control was 97.3 ms.
+
+## SQ-20 (2026-11-24)
+
+Preset `SQ-20 128K`, chunk 512, `--vram-experts-gb 10.23 --ram-experts-gb 5.45`,
+DSpark. Cold experts stay in pinned host memory. KV was 11520 tokens in VRAM and
+119552 in host memory. The candidate was `--chunk 1024` only. It was not kept.
+Prefill got slower.
+
+| Run | Short decode | Prefill at 117169 | TTFT | Decode at 117169 | Retrieval |
+|---|---:|---:|---:|---:|---|
+| Control, chunk 512 | 51.64 tok/s | 489.2 tok/s | 239.5 s | 3.37 tok/s | 3/3 |
+| Rejected, `--chunk 1024` | 54.24 tok/s | 465.4 tok/s | 251.7 s | 3.16 tok/s | 3/3 |
+
+Host RSS was recorded as 0 on both rows, for the same watchdog mismatch. The
+rejected 144469-token prompt recorded a short decode of 52.59 tok/s before the
+HTTP 400. Short TTFT on the control was 633.7 ms.
